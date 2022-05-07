@@ -1,0 +1,84 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+toolchain("win") {
+  tool("cc") {
+    precompiled_header_type = "msvc"
+    pdbname = "{{target_out_dir}}/{{label_name}}_c.pdb"
+   
+    command = "cl /c {{source}} /showIncludes {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} /Fo{{output}} /Fd\"$pdbname\""
+    depsformat = "msvc"
+    description = "CC {{output}}"
+    outputs =
+        [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.obj" ]
+  }
+
+  tool("cxx") {
+    precompiled_header_type = "msvc"
+    pdbname = "{{target_out_dir}}/{{label_name}}_cc.pdb"
+
+    command = "cl /c {{source}} /showIncludes {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} /Fo{{output}} /Fd\"$pdbname\""
+    depsformat = "msvc"
+    description = "CXX {{output}}"
+    outputs =
+        [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+  }
+
+  tool("alink") {
+    rspfile = "{{output}}.rsp"
+    command = "lib /OUT:{{output}} @$rspfile"
+    description = "LIB {{target_output_name}}{{output_extension}}"
+    outputs =
+        [ "{{target_out_dir}}/{{target_output_name}}{{output_extension}}" ]
+    default_output_extension = ".lib"
+
+    rspfile_content = "{{inputs_newline}}"
+  }
+
+  tool("solink") {
+    dllname = "{{target_output_name}}{{output_extension}}" 
+    sofile = "{{output_dir}}/$dllname"
+    libname = "$dllname.lib"
+    rspfile = dllname + ".rsp"
+
+    command = "link /OUT:$sofile /IMPLIB:$libname /DLL @$rspfile"
+    description = "SOLINK $dllname"
+
+    # Use this for {{output_extension}} expansions unless a target manually
+    # overrides it (in which case {{output_extension}} will be what the target
+    # specifies).
+    default_output_extension = ".dll"
+
+    # Use this for {{output_dir}} expansions unless a target manually overrides
+    # it (in which case {{output_dir}} will be what the target specifies).
+    default_output_dir = "{{root_out_dir}}"
+    outputs = [ sofile, libname ]
+    link_output = libname
+    depend_output = libname
+
+    rspfile_content = "{{inputs_newline}} {{solibs}} {{libs}}"
+  }
+
+  tool("link") {
+    exename = "{{target_output_name}}.exe"
+    rspfile = "$exename.rsp"
+
+    command = "link /OUT:$exename @$rspfile"
+
+    description = "LINK $exename"
+    default_output_dir = "{{root_out_dir}}"
+    rspfile_content = "{{inputs}}"
+    outputs = [ exename ]
+  }
+
+  tool("stamp") {
+    command = "cmd /c type nul > \"{{output}}\""
+    description = "STAMP {{output}}"
+  }
+
+  tool("copy") {
+    command = "copy /y {{source}} {{output}}"
+    description = "COPY {{source}} {{output}}"
+  }
+}
